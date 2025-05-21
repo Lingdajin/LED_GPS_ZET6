@@ -52,7 +52,14 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+int Sync_code[8] = {0,1,0,1,0,1,0,1};
+int LED0_code[8] = {0,0,0,0,1,0,1,0};
+int LED1_code[8] = {0,0,1,0,1,1,0,1};
+int LED2_code[8] = {0,0,0,1,1,0,0,1};
+int FFH[8] = {1,1,1,1,1,1,1,1};
+int Frame_count = 0;  //帧数记数，每个LED100帧
+int LED_choose = 0; //LED选择，0-LED0，1-LED1，2-LED2
+int LED_code_count = 0; //LED编码计数
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -159,7 +166,176 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if(htim->Instance == TIM1)
   {
-    
+    switch (LED_choose)
+    {
+    case 0: //LED0
+      if (Frame_count < 100)
+      {
+        if (LED_code_count < 8)
+        {
+          if (Sync_code[LED_code_count] == 1)
+          {
+            LED0(1);
+          }
+          else
+          {
+            LED0(0);
+          }
+          LED_code_count++;
+        }
+        else if(LED_code_count < 16)
+        {
+          if(LED0_code[LED_code_count - 8] == 1)
+          {
+            LED0(1);
+          }
+          else
+          {
+            LED0(0);
+          }
+          LED_code_count++;
+        }
+        else if(LED_code_count < 24)
+        {
+          if ((FFH[LED_code_count - 16] == 1) && (Frame_count % 2 == 0))
+          {
+            LED0(1);
+          }
+          else
+          {
+            LED0(0);
+          }
+          LED_code_count++;
+        }
+        else{
+          LED_code_count = 0;
+          Frame_count++;
+        }
+        if (Frame_count == 100)
+        {
+          Frame_count = 0;
+          LED_choose = 1;
+        }
+      }
+      else
+      {
+        Frame_count = 0;
+        LED_choose = 1;
+      }
+      break;
+    case 1: //LED1
+      if (Frame_count < 100)
+      {
+        if (LED_code_count < 8)
+        {
+          if (Sync_code[LED_code_count] == 1)
+          {
+            LED1(1);
+          }
+          else
+          {
+            LED1(0);
+          }
+          LED_code_count++;
+        }
+        else if(LED_code_count < 16)
+        {
+          if(LED1_code[LED_code_count - 8] == 1)
+          {
+            LED1(1);
+          }
+          else
+          {
+            LED1(0);
+          }
+          LED_code_count++;
+        }
+        else if(LED_code_count < 24)
+        {
+          if ((FFH[LED_code_count - 16] == 1) && (Frame_count % 2 == 0))
+          {
+            LED1(1);
+          }
+          else
+          {
+            LED1(0);
+          }
+          LED_code_count++;
+        }
+        else{
+          LED_code_count = 0;
+          Frame_count++;
+        }
+        if (Frame_count == 100)
+        {
+          Frame_count = 0;
+          LED_choose = 2;
+        }
+      }
+      else
+      {
+        Frame_count = 0;
+        LED_choose = 2;
+      }
+      break;
+    case 2: //LED2
+      if (Frame_count < 100)
+      {
+        if (LED_code_count < 8)
+        {
+          if (Sync_code[LED_code_count] == 1)
+          {
+            LED2(1);
+          }
+          else
+          {
+            LED2(0);
+          }
+          LED_code_count++;
+        }
+        else if(LED_code_count < 16)
+        {
+          if(LED2_code[LED_code_count - 8] == 1)
+          {
+            LED2(1);
+          }
+          else
+          {
+            LED2(0);
+          }
+          LED_code_count++;
+        }
+        else if(LED_code_count < 24)
+        {
+          if ((FFH[LED_code_count - 16] == 1) && (Frame_count % 2 == 0))
+          {
+            LED2(1);
+          }
+          else
+          {
+            LED2(0);
+          }
+          LED_code_count++;
+        }
+        else{
+          LED_code_count = 0;
+          Frame_count++;
+        }
+        if (Frame_count == 100)
+        {
+          Frame_count = 0;
+          LED_choose = 0;
+        }
+      }
+      else
+      {
+        Frame_count = 0;
+        LED_choose = 0;
+      }
+      break;
+    default:
+      break;
+    }
   }
 
 }
