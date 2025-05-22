@@ -1,26 +1,25 @@
 /* USER CODE BEGIN Header */
 /**
- ****************************************************************************************************
- * @file        main.c
- * @author      锟斤拷锟斤拷原锟斤拷锟脚讹拷(ALIENTEK)
- * @version     V1.0
- * @date        2024-01-01
- * @brief       TFTLCD(MCU锟斤拷) 实锟斤拷
- * @license     Copyright (c) 2020-2032, 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷涌萍锟斤拷锟斤拷薰锟剿�
- ****************************************************************************************************
- * @attention
- *
- * 实锟斤拷平台:锟斤拷锟斤拷原锟斤拷 STM32F103锟斤拷锟斤拷锟斤拷
- * 锟斤拷锟斤拷锟斤拷频:www.yuanzige.com
- * 锟斤拷锟斤拷锟斤拷坛:www.openedv.com
- * 锟斤拷司锟斤拷址:www.alientek.com
- * 锟斤拷锟斤拷锟街�:openedv.taobao.com
- *
- ****************************************************************************************************
- */
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Main program body
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2025 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************
+  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
+#include "dma.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -28,10 +27,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "../../BSP/LED/led.h"
-#include "../../BSP/KEY/key.h"
-#include "../../BSP/LCD/lcd.h"
-#include "../../SYSTEM/delay/delay.h"
+#include <stdio.h>
+#include "arm_math.h"
+#include "lcd.h"
+#include "UserTask.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,6 +41,18 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+//LED位置
+const float LED_POS[3][2] = {
+		{0.0f, 0.0f},	//LED1
+		{1.0f, 0.0f},	//LED2
+		{0.5f, 0.5f}	//LED3
+};
+
+typedef enum {
+	LED1,
+	LED2,
+	LED3
+}LED_t;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -52,14 +63,22 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-int Sync_code[8] = {0,1,0,1,0,1,0,1};
-int LED0_code[8] = {0,0,0,0,1,0,1,0};
-int LED1_code[8] = {0,0,1,0,1,1,0,1};
-int LED2_code[8] = {0,0,0,1,1,0,0,1};
-int FFH[8] = {1,1,1,1,1,1,1,1};
-int Frame_count = 0;  //帧数记数，每个LED100帧
-int LED_choose = 0; //LED选择，0-LED0，1-LED1，2-LED2
-int LED_code_count = 0; //LED编码计数
+volatile uint8_t AdcConvEnd = 0;		//ADC采样完成标志
+
+volatile DecodeState_t decodeState = SYNC;
+volatile uint16_t bit_buffer = 0;		//adc采样的比特数据
+volatile uint8_t user_bit = 0;			//用户码缓冲区, 用于同步接收帧数据中的用户码
+volatile uint8_t user_bit_index = 0;
+
+volatile uint8_t user_code = 0;			//当前帧读取到的用户码
+volatile LED_t current_len = LED1;
+
+volatile uint16_t sample_buffer[SAMPLE_COUNT];
+volatile uint8_t sample_index = 0;
+
+volatile uint8_t user_count[LED_COUNT] = {0};	//接收到的led的数据帧数量
+volatile uint8_t user_ready[LED_COUNT] = {0};	//一个时隙中是否接收完毕
+float intensity[LED_COUNT];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -71,6 +90,11 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+int __io_putchar(int ch)
+{
+	HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 1000);
+	return ch;
+}
 /* USER CODE END 0 */
 
 /**
@@ -79,6 +103,7 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -96,25 +121,36 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  delay_init(72);						   /* 锟斤拷始锟斤拷锟斤拷时锟斤拷锟斤拷 */
+
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_ADC1_Init();
   MX_FSMC_Init();
   MX_USART1_UART_Init();
-  MX_TIM1_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start(&htim1);             /* TIM1计时开始 */
-  HAL_TIM_Base_Start_IT(&htim1);          /* TIM1计时中断开始 */
+  //HAL_TIM_Base_Start_IT(&htim6);
+  lcd_init();
+  HAL_TIM_Base_Start(&htim3);
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)bit_buffer, 1);
+
+  //filter_test();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if(AdcConvEnd) {
+		  uint8_t bit = (bit_buffer > THRESHOLD) ? 1 : 0;
+		  handleBit(bit);
 
-
+		  AdcConvEnd = 0;
+		  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)bit_buffer, 1);
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -131,16 +167,22 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
+  /** Configure the main internal regulator output voltage
+  */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 168;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -152,193 +194,17 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
   {
     Error_Handler();
   }
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  if(htim->Instance == TIM1)
-  {
-    switch (LED_choose)
-    {
-    case 0: //LED0
-      if (Frame_count < 100)
-      {
-        if (LED_code_count < 8)
-        {
-          if (Sync_code[LED_code_count] == 1)
-          {
-            LED0(1);
-          }
-          else
-          {
-            LED0(0);
-          }
-          LED_code_count++;
-        }
-        else if(LED_code_count < 16)
-        {
-          if(LED0_code[LED_code_count - 8] == 1)
-          {
-            LED0(1);
-          }
-          else
-          {
-            LED0(0);
-          }
-          LED_code_count++;
-        }
-        else if(LED_code_count < 24)
-        {
-          if ((FFH[LED_code_count - 16] == 1) && (Frame_count % 2 == 0))
-          {
-            LED0(1);
-          }
-          else
-          {
-            LED0(0);
-          }
-          LED_code_count++;
-        }
-        else{
-          LED_code_count = 0;
-          Frame_count++;
-        }
-        if (Frame_count == 100)
-        {
-          Frame_count = 0;
-          LED_choose = 1;
-        }
-      }
-      else
-      {
-        Frame_count = 0;
-        LED_choose = 1;
-      }
-      break;
-    case 1: //LED1
-      if (Frame_count < 100)
-      {
-        if (LED_code_count < 8)
-        {
-          if (Sync_code[LED_code_count] == 1)
-          {
-            LED1(1);
-          }
-          else
-          {
-            LED1(0);
-          }
-          LED_code_count++;
-        }
-        else if(LED_code_count < 16)
-        {
-          if(LED1_code[LED_code_count - 8] == 1)
-          {
-            LED1(1);
-          }
-          else
-          {
-            LED1(0);
-          }
-          LED_code_count++;
-        }
-        else if(LED_code_count < 24)
-        {
-          if ((FFH[LED_code_count - 16] == 1) && (Frame_count % 2 == 0))
-          {
-            LED1(1);
-          }
-          else
-          {
-            LED1(0);
-          }
-          LED_code_count++;
-        }
-        else{
-          LED_code_count = 0;
-          Frame_count++;
-        }
-        if (Frame_count == 100)
-        {
-          Frame_count = 0;
-          LED_choose = 2;
-        }
-      }
-      else
-      {
-        Frame_count = 0;
-        LED_choose = 2;
-      }
-      break;
-    case 2: //LED2
-      if (Frame_count < 100)
-      {
-        if (LED_code_count < 8)
-        {
-          if (Sync_code[LED_code_count] == 1)
-          {
-            LED2(1);
-          }
-          else
-          {
-            LED2(0);
-          }
-          LED_code_count++;
-        }
-        else if(LED_code_count < 16)
-        {
-          if(LED2_code[LED_code_count - 8] == 1)
-          {
-            LED2(1);
-          }
-          else
-          {
-            LED2(0);
-          }
-          LED_code_count++;
-        }
-        else if(LED_code_count < 24)
-        {
-          if ((FFH[LED_code_count - 16] == 1) && (Frame_count % 2 == 0))
-          {
-            LED2(1);
-          }
-          else
-          {
-            LED2(0);
-          }
-          LED_code_count++;
-        }
-        else{
-          LED_code_count = 0;
-          Frame_count++;
-        }
-        if (Frame_count == 100)
-        {
-          Frame_count = 0;
-          LED_choose = 0;
-        }
-      }
-      else
-      {
-        Frame_count = 0;
-        LED_choose = 0;
-      }
-      break;
-    default:
-      break;
-    }
-  }
 
-}
 /* USER CODE END 4 */
 
 /**
