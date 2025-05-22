@@ -52,7 +52,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-int Sync_code[8] = {0,1,0,1,0,1,0,1};
+int Sync_code[8] = {1,0,1,0,1,0,1,0};
 int LED0_code[8] = {0,0,0,0,1,0,1,0};
 int LED1_code[8] = {0,0,1,0,1,1,0,1};
 int LED2_code[8] = {0,0,0,1,1,0,0,1};
@@ -105,7 +105,11 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start(&htim1);             /* TIM1计时开始 */
+  //HAL_TIM_Base_Start(&htim1);             /* TIM1计时开始 */
+  LED0(0);
+  LED1(0);
+  LED2(0);
+  delay_ms(1000);
   HAL_TIM_Base_Start_IT(&htim1);          /* TIM1计时中断开始 */
   /* USER CODE END 2 */
 
@@ -169,7 +173,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     switch (LED_choose)
     {
     case 0: //LED0
-      if (Frame_count < 100)
+      if (Frame_count < 5)
       {
         if (LED_code_count < 8)
         {
@@ -197,7 +201,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         }
         else if(LED_code_count < 24)
         {
-          if ((FFH[LED_code_count - 16] == 1) && (Frame_count % 2 == 0))
+            if (FFH[LED_code_count - 16] == 1)
           {
             LED0(1);
           }
@@ -205,26 +209,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
           {
             LED0(0);
           }
+
           LED_code_count++;
+          if(LED_code_count == 24)
+          {
+        	  LED_code_count = 0;
+              Frame_count++;
+              if(Frame_count == 5)
+              {
+            	  Frame_count = 0;
+            	  LED_choose = 1;
+            	  LED0(0);
+            	  LED2(0);
+              }
+          }
         }
-        else{
-          LED_code_count = 0;
-          Frame_count++;
-        }
-        if (Frame_count == 100)
-        {
-          Frame_count = 0;
-          LED_choose = 1;
-        }
-      }
-      else
-      {
-        Frame_count = 0;
-        LED_choose = 1;
       }
       break;
     case 1: //LED1
-      if (Frame_count < 100)
+      if (Frame_count < 5)
       {
         if (LED_code_count < 8)
         {
@@ -252,7 +255,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         }
         else if(LED_code_count < 24)
         {
-          if ((FFH[LED_code_count - 16] == 1) && (Frame_count % 2 == 0))
+          if (FFH[LED_code_count - 16] == 1)
           {
             LED1(1);
           }
@@ -261,25 +264,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
             LED1(0);
           }
           LED_code_count++;
+          if(LED_code_count == 24)
+          {
+        	  LED_code_count = 0;
+              Frame_count++;
+              if(Frame_count == 5)
+              {
+            	  Frame_count = 0;
+            	  LED_choose = 2;
+            	  LED0(0);
+            	  LED1(0);
+              }
+          }
         }
-        else{
-          LED_code_count = 0;
-          Frame_count++;
-        }
-        if (Frame_count == 100)
-        {
-          Frame_count = 0;
-          LED_choose = 2;
-        }
-      }
-      else
-      {
-        Frame_count = 0;
-        LED_choose = 2;
       }
       break;
     case 2: //LED2
-      if (Frame_count < 100)
+      if (Frame_count < 5)
       {
         if (LED_code_count < 8)
         {
@@ -307,7 +308,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         }
         else if(LED_code_count < 24)
         {
-          if ((FFH[LED_code_count - 16] == 1) && (Frame_count % 2 == 0))
+            if (FFH[LED_code_count - 16] == 1)
           {
             LED2(1);
           }
@@ -316,21 +317,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
             LED2(0);
           }
           LED_code_count++;
+          if(LED_code_count == 24)
+          {
+        	  LED_code_count = 0;
+              Frame_count++;
+              if(Frame_count == 5)
+              {
+            	  Frame_count = 0;
+            	  LED_choose = 0;
+            	  LED1(0);
+            	  LED2(0);
+              }
+          }
         }
-        else{
-          LED_code_count = 0;
-          Frame_count++;
-        }
-        if (Frame_count == 100)
-        {
-          Frame_count = 0;
-          LED_choose = 0;
-        }
-      }
-      else
-      {
-        Frame_count = 0;
-        LED_choose = 0;
       }
       break;
     default:
