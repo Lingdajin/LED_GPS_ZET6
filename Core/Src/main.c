@@ -31,6 +31,7 @@
 #include "../../BSP/LED/led.h"
 #include "../../BSP/KEY/key.h"
 #include "../../BSP/LCD/lcd.h"
+#include "../../BSP/KEYBOARD/keyboard.h"
 #include "../../SYSTEM/delay/delay.h"
 /* USER CODE END Includes */
 
@@ -60,6 +61,12 @@ int FFH[8] = {1,1,1,1,1,1,1,1};
 int Frame_count = 0;  //帧数记数，每个LED100帧
 int LED_choose = 0; //LED选择，0-LED0，1-LED1，2-LED2
 int LED_code_count = 0; //LED编码计数
+
+KeyBoard_t KeyBoardCtrl[ROW_NUM];	//存储行状态
+uint8_t KeyBoardBuffer[KEY_BUFFER_SIZE];	//存储按键按下的值, 按键值的范围为1-16
+uint8_t scanRow = 0;				//当前扫描的行
+volatile uint8_t KeyBoardBuffW = 0;			//写索引
+volatile uint8_t KeyBoardBuffR = 0;			//读索引
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -104,6 +111,7 @@ int main(void)
   MX_FSMC_Init();
   MX_USART1_UART_Init();
   MX_TIM1_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   //HAL_TIM_Base_Start(&htim1);             /* TIM1计时开始 */
   LED0(0);
@@ -111,6 +119,7 @@ int main(void)
   LED2(0);
   delay_ms(1000);
   HAL_TIM_Base_Start_IT(&htim1);          /* TIM1计时中断开始 */
+  HAL_TIM_Base_Start_IT(&htim6);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -341,6 +350,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     default:
       break;
     }
+  }
+  //按键消抖延时定时器, 1ms调用一次
+  else if(htim->Instance == TIM6) {
+	  KeyBoardCtrl[scanRow].dec++;
   }
 
 }
