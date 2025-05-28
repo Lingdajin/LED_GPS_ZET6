@@ -114,6 +114,7 @@ int main(void)
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   //HAL_TIM_Base_Start(&htim1);             /* TIM1计时开始 */
+  keyboard_init();                        /* 矩阵键盘初始化 */
   LED0(0);
   LED1(0);
   LED2(0);
@@ -126,8 +127,11 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-
+    keyboard_scan();                      /* 键盘扫描 */
+    // for(int i = 0; i < KEY_BUFFER_SIZE; i++)
+    // {
+    //       printf("keyboard buffer: %d\r\n", KeyBoardBuffer[i]);
+    // }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
