@@ -31,6 +31,7 @@
 #include "../../BSP/LED/led.h"
 #include "../../BSP/KEY/key.h"
 #include "../../BSP/LCD/lcd.h"
+#include "../../BSP/KEYBOARD/keyboard.h"
 #include "../../SYSTEM/delay/delay.h"
 /* USER CODE END Includes */
 
@@ -52,7 +53,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-int Sync_code[8] = {1,0,1,0,1,0,1,0};
+int Sync_code[8] = {1,1,1,0,1,0,1,0};
 int LED0_code[8] = {0,0,0,0,1,0,1,0};
 int LED1_code[8] = {0,0,1,0,1,1,0,1};
 int LED2_code[8] = {0,0,0,1,1,0,0,1};
@@ -60,6 +61,20 @@ int FFH[8] = {1,1,1,1,1,1,1,1};
 int Frame_count = 0;  //帧数记数，每个LED100帧
 int LED_choose = 0; //LED选择，0-LED0，1-LED1，2-LED2
 int LED_code_count = 0; //LED编码计数
+int LED0_message[8] = {0,0,0,0,0,0,0,0}; //LED0消息，此处用来发送数据的位置，从0-255，0代表不发送
+int LED1_message[8] = {0,0,0,0,0,0,0,0}; //LED1消息，用来发送数据，使用二进制码，全0代表空数据
+int LED2_message[8] = {1,1,1,1,1,1,1,1}; //LED2消息，暂无用处
+
+uint8_t LED0_message_bin = 0; //LED0消息二进制值
+uint8_t LED1_message_bin = 0; //LED1消息二进制值
+uint8_t LED2_message_bin = 0; //LED2消息二进制值
+
+
+KeyBoard_t KeyBoardCtrl[ROW_NUM];	//存储行状态
+uint8_t KeyBoardBuffer[KEY_BUFFER_SIZE];	//存储按键按下的值, 按键值的范围为1-16,129-144,0代表无值,1-16代表按下1-16,129-144代表抬起对应按键
+uint8_t scanRow = 0;				//当前扫描的行
+volatile uint8_t KeyBoardBuffW = 0;			//写索引
+volatile uint8_t KeyBoardBuffR = 0;			//读索引
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -104,20 +119,36 @@ int main(void)
   MX_FSMC_Init();
   MX_USART1_UART_Init();
   MX_TIM1_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   //HAL_TIM_Base_Start(&htim1);             /* TIM1计时开始 */
+  lcd_init();                            /* LCD初始化 */
+  lcd_clear(WHITE);                      /* LCD清屏 */
+  keyboard_init();                        /* 矩阵键盘初始化 */
   LED0(0);
   LED1(0);
   LED2(0);
   delay_ms(1000);
   HAL_TIM_Base_Start_IT(&htim1);          /* TIM1计时中断开始 */
+  HAL_TIM_Base_Start_IT(&htim6);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
+    keyboard_scan();                      /* 键盘扫描 */
+    for(int i = 0; i < 8; i++)
+    {
+      uint8_t led0_message = (LED0_message_bin & (1 << i));
+      uint8_t led1_message = (LED1_message_bin & (1 << i));
+      LED0_message[7 - i] = led0_message ? 1 : 0; //将LED0消息转换为二进制
+      LED1_message[7 - i] = led1_message ? 1 : 0; //将LED1消息转换为二进制
+    }
+    char led1_message_str[30];
+    sprintf(led1_message_str, "messsage: %X", LED1_message_bin);
+    lcd_show_string(30, 90, 200, 16, 16, led1_message_str, RED);
+    //printf("%d \r\n", LED1_message_bin);
 
     /* USER CODE END WHILE */
 
@@ -211,11 +242,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
           }
           else
           {
-              LED0(0);
+            LED0(0);
+          }
+          LED_code_count++;
+        }
+        else if(LED_code_count < 32)
+        {
+          if (LED0_message[LED_code_count - 24] == 1)
+          {
+        	  LED0(1);
+          }
+          else
+          {
+            LED0(0);
           }
 
           LED_code_count++;
-          if(LED_code_count == 24)
+          if(LED_code_count == 32)
           {
         	  LED_code_count = 0;
               Frame_count++;
@@ -270,7 +313,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
               LED1(0);
           }
           LED_code_count++;
-          if(LED_code_count == 24)
+        }
+        else if(LED_code_count < 32)
+        {
+          if (LED1_message[LED_code_count - 24] == 1)
+          {
+              LED1(1);
+          }
+          else
+          {
+              LED1(0);
+          }
+
+          LED_code_count++;
+          if(LED_code_count == 32)
           {
         	  LED_code_count = 0;
               Frame_count++;
@@ -317,15 +373,28 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         else if(LED_code_count < 24)
         {
             if (FFH[LED_code_count - 16] == 1)
-          {
+            {
                 LED2(1);
+            }
+            else
+            {
+              LED2(0);
+            }
+            LED_code_count++;
+        }
+        else if(LED_code_count < 32)
+        {
+          if (LED2_message[LED_code_count - 24] == 1)
+          {
+            LED2(1);
           }
           else
           {
-              LED2(0);
+            LED2(0);
           }
+        
           LED_code_count++;
-          if(LED_code_count == 24)
+          if(LED_code_count == 32)
           {
         	  LED_code_count = 0;
               Frame_count++;
@@ -341,6 +410,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     default:
       break;
     }
+  }
+  //按键消抖延时定时器, 1ms调用一次
+  else if(htim->Instance == TIM6) {
+	  KeyBoardCtrl[scanRow].dec++;
   }
 
 }
