@@ -28,7 +28,7 @@
 #define ROW_NUM 4
 #define COL_NUM 4
 #define KEY_BUFFER_SIZE 16
-#define KEY_INIT_STATE_MASK 0x0F
+#define KEY_INIT_STATE_MASK 0x00
 #define DEC_TIME 10	//防抖计数 ms
 #define KEY_CLOSE_MASK	0x80	//按键释放
 
@@ -42,6 +42,9 @@ extern KeyBoard_t KeyBoardCtrl[ROW_NUM];
 extern uint8_t KeyBoardBuffer[KEY_BUFFER_SIZE];
 extern volatile uint8_t KeyBoardBuffW;
 extern uint8_t scanRow;
+extern uint8_t LED0_message_bin;
+extern uint8_t LED1_message_bin;
+extern uint8_t LED2_message_bin;
 
 void setRow(uint8_t row);
 uint8_t readCols();

@@ -12,11 +12,19 @@
  * @note  需在系统初始化时调用一次，设置初始按键状态为高电平（未按下）
  */
 void keyboard_init() {
+	HAL_GPIO_WritePin(ROW0_GPIO_Port, ROW0_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(ROW1_GPIO_Port, ROW1_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(ROW2_GPIO_Port, ROW2_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(ROW3_GPIO_Port, ROW3_Pin, GPIO_PIN_SET);
 	for(int i = 0; i < ROW_NUM; i++) {
 		KeyBoardCtrl[i].dec = 0;
 		KeyBoardCtrl[i].oldstate = KEY_INIT_STATE_MASK;
 		KeyBoardCtrl[i].newstate = KEY_INIT_STATE_MASK;
 	}
+	for(int i = 0; i < KEY_BUFFER_SIZE; i++)
+  	{
+    	KeyBoardBuffer[i] = 0;               /* 键盘缓冲区清零 */
+  	}
 }
 
 /*
@@ -83,17 +91,32 @@ void keyboard_scan() {
 					//4x4矩阵键盘对应的值
 					uint8_t keyVal = scanRow * 4 + i;
 					if((KeyBoardCtrl[scanRow].newstate & (1 << i)) == 0) {
-						//按下按键, 可以用串口或指示灯观察
+						//按下按键, 可以用串口或指示灯观察，检测到的是按键释放，不知为何？
+						//printf("Key Pressed: %d\n", keyVal);
+						// KeyBoardBuffer[KeyBoardBuffW++] = keyVal + 1;
+						// if(KeyBoardBuffW >= KEY_BUFFER_SIZE) {
+						// 	KeyBoardBuffW = 0;
+						// }
+						if(LED0_message_bin < 16)
+						{
+							LED0_message_bin += 1;
+						}
+						else
+						{
+							 LED0_message_bin = 1; //LED0消息二进制值加1，超过16后归1
+						}
+          				LED1_message_bin = keyVal + 1; //将按键值以二进制存入LED1消息
+						//printf("Key Pressed: %d, LED1_message_bin: %d\n", keyVal, LED1_message_bin);
 					}
 					else {
 						//按键释放
 						keyVal |= KEY_CLOSE_MASK;
 					}
 
-					KeyBoardBuffer[KeyBoardBuffW++] = keyVal + 1;
-					if(KeyBoardBuffW >= KEY_BUFFER_SIZE) {
-						KeyBoardBuffW = 0;
-					}
+					// KeyBoardBuffer[KeyBoardBuffW++] = keyVal + 1;
+					// if(KeyBoardBuffW >= KEY_BUFFER_SIZE) {
+					// 	KeyBoardBuffW = 0;
+					// }
 				}
 			}
 			KeyBoardCtrl[scanRow].oldstate = KeyBoardCtrl[scanRow].newstate;
