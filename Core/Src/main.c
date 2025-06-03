@@ -32,6 +32,7 @@
 #include "../../BSP/KEY/key.h"
 #include "../../BSP/LCD/lcd.h"
 #include "../../BSP/KEYBOARD/keyboard.h"
+#include "../../BSP/MUSIC/music.h"
 #include "../../SYSTEM/delay/delay.h"
 /* USER CODE END Includes */
 
@@ -75,6 +76,8 @@ uint8_t KeyBoardBuffer[KEY_BUFFER_SIZE];	//存储按键按下的值, 按键值�
 uint8_t scanRow = 0;				//当前扫描的行
 volatile uint8_t KeyBoardBuffW = 0;			//写索引
 volatile uint8_t KeyBoardBuffR = 0;			//读索引
+
+uint8_t music[MUSIC_LEN];	//发送的乐谱信息
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -131,6 +134,8 @@ int main(void)
   delay_ms(1000);
   HAL_TIM_Base_Start_IT(&htim1);          /* TIM1计时中断开始 */
   HAL_TIM_Base_Start_IT(&htim6);
+
+  build_led_message(music);
   /* USER CODE END 2 */
 
   /* Infinite loop */
