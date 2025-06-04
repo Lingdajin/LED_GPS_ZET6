@@ -53,17 +53,17 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-int Sync_code[8] = {1,1,1,0,1,0,1,0};
-int LED0_code[8] = {0,0,0,0,1,0,1,0};
-int LED1_code[8] = {0,0,1,0,1,1,0,1};
-int LED2_code[8] = {0,0,0,1,1,0,0,1};
-int FFH[8] = {1,1,1,1,1,1,1,1};
-int Frame_count = 0;  //帧数记数，每个LED100帧
+int Sync_code[8] = {1,1,1,0,1,0,1,0}; //同步码，8位
+int LED0_code[8] = {0,0,0,0,1,0,1,0}; //LED0用户编码，8位
+int LED1_code[8] = {0,0,1,0,1,1,0,1}; //LED1用户编码，8位
+int LED2_code[8] = {0,0,0,1,1,0,0,1}; //LED2用户编码，8位
+int FFH[8] = {1,1,1,1,1,1,1,1};       //FFH码，8位，全部为1，用来方便测量光强值
+int Frame_count = 0;  //帧数记数，每个LED2帧
 int LED_choose = 0; //LED选择，0-LED0，1-LED1，2-LED2
 int LED_code_count = 0; //LED编码计数
-int LED0_message[8] = {0,0,0,0,0,0,0,0}; //LED0消息，此处用来发送数据的位置，从0-255，0代表不发送
+int LED0_message[8] = {0,0,0,0,0,0,0,0}; //LED0消息，从0-255，0代表不发送，每发送一个信息，其值自增1
 int LED1_message[8] = {0,0,0,0,0,0,0,0}; //LED1消息，用来发送数据，使用二进制码，全0代表空数据
-int LED2_message[8] = {1,1,1,1,1,1,1,1}; //LED2消息，暂无用处
+int LED2_message[8] = {1,1,1,1,1,1,1,1}; //LED2消息，设计为全1，表示恒定发送十进制数字255
 
 uint8_t LED0_message_bin = 0; //LED0消息二进制值
 uint8_t LED1_message_bin = 0; //LED1消息二进制值
@@ -208,7 +208,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       {
     	  LED2(0);
       }
-      if (Frame_count < 5)
+      if (Frame_count < 2)
       {
         if (LED_code_count < 8)
         {
@@ -262,7 +262,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
           {
         	  LED_code_count = 0;
               Frame_count++;
-              if(Frame_count == 5)
+              if(Frame_count == 2)
               {
             	  Frame_count = 0;
             	  LED_choose = 1;
@@ -276,7 +276,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       {
     	  LED0(0);
       }
-      if (Frame_count < 5)
+      if (Frame_count < 2)
       {
         if (LED_code_count < 8)
         {
@@ -330,7 +330,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
           {
         	  LED_code_count = 0;
               Frame_count++;
-              if(Frame_count == 5)
+              if(Frame_count == 2)
               {
             	  Frame_count = 0;
             	  LED_choose = 2;
@@ -344,7 +344,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       {
     	  LED1(0);
       }
-      if (Frame_count < 5)
+      if (Frame_count < 2)
       {
         if (LED_code_count < 8)
         {
@@ -398,7 +398,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
           {
         	  LED_code_count = 0;
               Frame_count++;
-              if(Frame_count == 5)
+              if(Frame_count == 2)
               {
             	  Frame_count = 0;
             	  LED_choose = 0;
