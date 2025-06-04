@@ -48,7 +48,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define FRAME_PER_USER	5	//每个用户时隙占用的数据帧数
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -77,7 +77,9 @@ uint8_t scanRow = 0;				//当前扫描的行
 volatile uint8_t KeyBoardBuffW = 0;			//写索引
 volatile uint8_t KeyBoardBuffR = 0;			//读索引
 
-uint8_t music[MUSIC_LEN];	//发送的乐谱信息
+uint8_t music[MUSIC_LEN + 2];	//发送的乐谱信息, 加入开始和结束标志符
+uint8_t music_indexR = 0;	//读索引
+volatile uint8_t message_mode = 0;		//led_message数据帧的内容 0-矩阵键盘 1-乐谱信息
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -142,6 +144,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if(key_scan(0) == WKUP_PRES) {	//WKUP按键按下时切换帧内容
+		  message_mode = (message_mode + 1) % 2;
+	  }
     keyboard_scan();                      /* 键盘扫描 */
     for(int i = 0; i < 8; i++)
     {
@@ -204,7 +209,7 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  if(htim->Instance == TIM1)
+  if(htim->Instance == TIM1 && message_mode == 0)	//发送矩阵键盘编码值
   {
     switch (LED_choose)
     {
@@ -415,6 +420,105 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     default:
       break;
     }
+  }
+  else if(htim->Instance == TIM1 && message_mode) {		//发送乐谱信息
+	  uint8_t cur_tone = 0;
+	  uint8_t cur_led_message[8];
+
+	  if(music_indexR < MUSIC_LEN + 2) {
+		  cur_tone = music[music_indexR];	//当前要发送的乐谱信息
+		  for(int i = 0; i < 8; i++) {
+			  cur_led_message[i] = (cur_tone >> (7 - i)) && 0x01;
+		  }
+	  }
+
+	  switch(LED_choose) {
+	  case 0:
+		  if(HAL_GPIO_ReadPin(LED2_GPIO_Port, LED2_Pin)) LED2(0);
+		  if(Frame_count < FRAME_PER_USER) {		//一个用户时隙占用5个数据帧
+			  if(LED_code_count < 8) {	//发送同步码
+				  LED0(Sync_code[LED_code_count]);
+			  }
+			  else if(LED_code_count < 16) {	//发送用户码
+				  LED0(LED0_code[LED_code_count - 8]);
+			  }
+			  else if(LED_code_count < 24) {	//发送0xFFH
+				  LED0(FFH[LED_code_count - 16]);
+			  }
+			  else if(LED_code_count < 32) {	//发送乐谱信息
+				  LED0(cur_led_message[LED_code_count - 24]);
+			  }
+			  LED_code_count++;
+
+			  if(LED_code_count == 32) {
+				  LED_code_count = 0;
+				  Frame_count++;
+				  music_indexR = (music_indexR + 1) % (MUSIC_LEN + 2);
+				  if(Frame_count == FRAME_PER_USER) {
+					  Frame_count = 0;
+					  LED_choose = 1;
+				  }
+			  }
+		  }
+		  break;
+	  case 1:
+		  if(HAL_GPIO_ReadPin(LED0_GPIO_Port, LED0_Pin)) LED0(0);
+		  if(Frame_count < FRAME_PER_USER) {		//一个用户时隙占用5个数据帧
+			  if(LED_code_count < 8) {	//发送同步码
+				  LED1(Sync_code[LED_code_count]);
+			  }
+			  else if(LED_code_count < 16) {	//发送用户码
+				  LED1(LED1_code[LED_code_count - 8]);
+			  }
+			  else if(LED_code_count < 24) {	//发送0xFFH
+				  LED1(FFH[LED_code_count - 16]);
+			  }
+			  else if(LED_code_count < 32) {	//发送乐谱信息
+				  LED1(cur_led_message[LED_code_count - 24]);
+			  }
+			  LED_code_count++;
+
+			  if(LED_code_count == 32) {
+				  LED_code_count = 0;
+				  Frame_count++;
+				  music_indexR = (music_indexR + 1) % (MUSIC_LEN + 2);
+				  if(Frame_count == FRAME_PER_USER) {
+					  Frame_count = 0;
+					  LED_choose = 2;
+				  }
+			  }
+		  }
+		  break;
+	  case 2:
+		  if(HAL_GPIO_ReadPin(LED1_GPIO_Port, LED1_Pin)) LED1(0);
+		  if(Frame_count < FRAME_PER_USER) {		//一个用户时隙占用5个数据帧
+			  if(LED_code_count < 8) {	//发送同步码
+				  LED2(Sync_code[LED_code_count]);
+			  }
+			  else if(LED_code_count < 16) {	//发送用户码
+				  LED2(LED2_code[LED_code_count - 8]);
+			  }
+			  else if(LED_code_count < 24) {	//发送0xFFH
+				  LED2(FFH[LED_code_count - 16]);
+			  }
+			  else if(LED_code_count < 32) {	//发送乐谱信息
+				  LED2(cur_led_message[LED_code_count - 24]);
+			  }
+			  LED_code_count++;
+
+			  if(LED_code_count == 32) {
+				  LED_code_count = 0;
+				  Frame_count++;
+				  music_indexR = (music_indexR + 1) % (MUSIC_LEN + 2);
+				  if(Frame_count == FRAME_PER_USER) {
+					  Frame_count = 0;
+					  LED_choose = 0;
+				  }
+			  }
+		  }
+		  break;
+	  }
+
   }
   //按键消抖延时定时器, 1ms调用一次
   else if(htim->Instance == TIM6) {

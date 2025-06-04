@@ -28,7 +28,10 @@ const Note liang_zhi_lao_hu[MUSIC_LEN] = {
 };
 
 void build_led_message(uint8_t* des) {
-	for(int i = 0; i < MUSIC_LEN; i++) {
+	des[0] = MUSIC_START;
+	des[MUSIC_LEN + 1] = MUSIC_END;
+
+	for(int i = 1; i < MUSIC_LEN + 1 ; i++) {
 		//前4个bit为音调, 后4个bit为节拍
 		uint8_t msg = ((liang_zhi_lao_hu[i].tone & 0x0F) << 4) | (liang_zhi_lao_hu[i].beat & 0x0F);
 		des[i] = msg;

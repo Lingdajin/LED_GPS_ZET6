@@ -11,6 +11,8 @@
 #include <stdint.h>
 
 #define MUSIC_LEN 32
+#define MUSIC_START	0xF0	//乐谱开始标志
+#define MUSIC_END	0xFF	//乐谱结束标志
 
 typedef struct {
 	uint8_t tone;
