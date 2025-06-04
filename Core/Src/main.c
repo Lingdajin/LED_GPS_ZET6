@@ -48,7 +48,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define FRAME_PER_USER	5	//每个用户时隙占用的数据帧数
+#define FRAME_PER_USER	2	//每个用户时隙占用的数据帧数
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -218,7 +218,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       {
     	  LED2(0);
       }
-      if (Frame_count < 5)
+      if (Frame_count < FRAME_PER_USER)
       {
         if (LED_code_count < 8)
         {
@@ -272,7 +272,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
           {
         	  LED_code_count = 0;
               Frame_count++;
-              if(Frame_count == 5)
+              if(Frame_count == FRAME_PER_USER)
               {
             	  Frame_count = 0;
             	  LED_choose = 1;
@@ -286,7 +286,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       {
     	  LED0(0);
       }
-      if (Frame_count < 5)
+      if (Frame_count < FRAME_PER_USER)
       {
         if (LED_code_count < 8)
         {
@@ -340,7 +340,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
           {
         	  LED_code_count = 0;
               Frame_count++;
-              if(Frame_count == 5)
+              if(Frame_count == FRAME_PER_USER)
               {
             	  Frame_count = 0;
             	  LED_choose = 2;
@@ -354,7 +354,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       {
     	  LED1(0);
       }
-      if (Frame_count < 5)
+      if (Frame_count < FRAME_PER_USER)
       {
         if (LED_code_count < 8)
         {
@@ -408,7 +408,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
           {
         	  LED_code_count = 0;
               Frame_count++;
-              if(Frame_count == 5)
+              if(Frame_count == FRAME_PER_USER)
               {
             	  Frame_count = 0;
             	  LED_choose = 0;
