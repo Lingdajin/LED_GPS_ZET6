@@ -77,7 +77,7 @@ uint8_t scanRow = 0;				//当前扫描的行
 volatile uint8_t KeyBoardBuffW = 0;			//写索引
 volatile uint8_t KeyBoardBuffR = 0;			//读索引
 
-uint8_t music[MUSIC_LEN + 2];	//发送的乐谱信息, 加入开始和结束标志符
+uint16_t music[MUSIC_LEN + 2];	//发送的乐谱信息, 加入开始和结束标志符
 uint8_t music_indexR = 0;	//读索引
 volatile uint8_t message_mode = 0;		//led_message数据帧的内容 0-矩阵键盘 1-乐谱信息
 /* USER CODE END PV */
@@ -422,13 +422,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
   }
   else if(htim->Instance == TIM1 && message_mode) {		//发送乐谱信息
-	  uint8_t cur_tone = 0;
-	  uint8_t cur_led_message[8];
+	  uint16_t cur_tone = 0;
+	  uint16_t cur_led_message[16];
 
 	  if(music_indexR < MUSIC_LEN + 2) {
 		  cur_tone = music[music_indexR];	//当前要发送的乐谱信息
-		  for(int i = 0; i < 8; i++) {
-			  cur_led_message[i] = (cur_tone >> (7 - i)) && 0x01;
+		  for(int i = 0; i < 16; i++) {
+			  cur_led_message[i] = (cur_tone >> (15 - i)) & 0x01;
 		  }
 	  }
 
@@ -445,12 +445,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			  else if(LED_code_count < 24) {	//发送0xFFH
 				  LED0(FFH[LED_code_count - 16]);
 			  }
-			  else if(LED_code_count < 32) {	//发送乐谱信息
+			  else if(LED_code_count < 40) {	//发送乐谱信息
 				  LED0(cur_led_message[LED_code_count - 24]);
 			  }
 			  LED_code_count++;
 
-			  if(LED_code_count == 32) {
+			  if(LED_code_count == 40) {
 				  LED_code_count = 0;
 				  Frame_count++;
 				  music_indexR = (music_indexR + 1) % (MUSIC_LEN + 2);
@@ -473,12 +473,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			  else if(LED_code_count < 24) {	//发送0xFFH
 				  LED1(FFH[LED_code_count - 16]);
 			  }
-			  else if(LED_code_count < 32) {	//发送乐谱信息
+			  else if(LED_code_count < 40) {	//发送乐谱信息
 				  LED1(cur_led_message[LED_code_count - 24]);
 			  }
 			  LED_code_count++;
 
-			  if(LED_code_count == 32) {
+			  if(LED_code_count == 40) {
 				  LED_code_count = 0;
 				  Frame_count++;
 				  music_indexR = (music_indexR + 1) % (MUSIC_LEN + 2);
@@ -501,12 +501,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			  else if(LED_code_count < 24) {	//发送0xFFH
 				  LED2(FFH[LED_code_count - 16]);
 			  }
-			  else if(LED_code_count < 32) {	//发送乐谱信息
+			  else if(LED_code_count < 40) {	//发送乐谱信息
 				  LED2(cur_led_message[LED_code_count - 24]);
 			  }
 			  LED_code_count++;
 
-			  if(LED_code_count == 32) {
+			  if(LED_code_count == 40) {
 				  LED_code_count = 0;
 				  Frame_count++;
 				  music_indexR = (music_indexR + 1) % (MUSIC_LEN + 2);

@@ -27,13 +27,13 @@ const Note liang_zhi_lao_hu[MUSIC_LEN] = {
 		{7, 4}, {11, 4}, {7, 8}
 };
 
-void build_led_message(uint8_t* des) {
+void build_led_message(uint16_t* des) {
 	des[0] = MUSIC_START;
 	des[MUSIC_LEN + 1] = MUSIC_END;
 
 	for(int i = 1; i < MUSIC_LEN + 1 ; i++) {
-		//前4个bit为音调, 后4个bit为节拍
-		uint8_t msg = ((liang_zhi_lao_hu[i].tone & 0x0F) << 4) | (liang_zhi_lao_hu[i].beat & 0x0F);
+		//音调、节拍各占一个字节的后4bit，再合并两个byte
+		uint16_t msg = ((liang_zhi_lao_hu[i].tone & 0x0F) << 8) | (liang_zhi_lao_hu[i].beat & 0x0F);
 		des[i] = msg;
 	}
 }
