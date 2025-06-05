@@ -33,7 +33,7 @@ void build_led_message(uint16_t* des) {
 
 	for(int i = 1; i < MUSIC_LEN + 1 ; i++) {
 		//音调、节拍各占一个字节的后4bit，再合并两个byte
-		uint16_t msg = ((liang_zhi_lao_hu[i].tone & 0x0F) << 8) | (liang_zhi_lao_hu[i].beat & 0x0F);
+		uint16_t msg = ((liang_zhi_lao_hu[i - 1].tone & 0x0F) << 8) | (liang_zhi_lao_hu[i - 1].beat & 0x0F);
 		des[i] = msg;
 	}
 }
